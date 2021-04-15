@@ -1,0 +1,131 @@
+/* Very important text */
+.game-round-label, .room-code-label {
+  font-size: 36px;
+}
+
+/* Semi important text */
+.ready-checkbox-label, .rounds-label, .waiting-label {
+  font-size: 24px;
+}
+
+.game-answer-input {
+  font-size: 64px;
+  text-align: center;
+  width: 50px;
+}
+
+.game-main {
+  display: flex;
+  flex-direction: column;
+  width: 65%;
+}
+
+.game-numbers-div {
+  margin-bottom: 20px;
+}
+
+.game-number {
+  font-size: 36px;
+  padding: 10px;
+}
+
+.game-round-label {
+  font-weight: bold;
+  text-align: center;
+}
+
+.game-submain {
+  display: flex;
+  flex-direction: column;
+  margin: 20px 0 auto 0;
+}
+
+/* .game-submain > div {
+  width: 50%;
+} */
+
+.ready-checkbox {
+  height: 18px;
+  margin-left: 10px;
+  width: 18px;
+}
+
+.ready-main, .waiting-main {
+  margin: auto;
+}
+
+.room-code-label {
+  margin: 10px 0 0 0;
+}
+
+.room-code {
+  font-weight: bold;
+}
+
+.rounds-label {
+  margin: 0;
+}
+
+.rounds {
+  font-weight: bold;
+}
+
+.sidebar-hr {
+  margin: 40px 0 0 0;
+  width: auto;
+}
+
+.sidebar-main {
+  background-color: #17191E;
+  width: 35%;
+}
+
+.sidebar-name {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 0;
+}
+
+.sidebar-players {
+  display: flex;
+}
+
+.sidebar-players div {
+  width: 50%;
+}
+
+.sidebar-score {
+  font-size: 36px;
+  font-weight: bold;
+  margin: auto;
+}
+
+.sidebar-scores {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  list-style-type: none;
+  margin-top: 25px;
+  padding: 0;
+}
+
+.sidebar-scores > li {
+  border-radius: 10%;
+  font-weight: bold;
+  height: 22px;
+  margin: 0 auto 10px auto;
+  padding: 10px;
+  width: 22px;
+}
+
+.score-item-green {
+  background-color: green;
+}
+
+.score-item-yellow {
+  background-color: #d0bc01;
+}
+
+.score-item-red {
+  background-color: red;
+}

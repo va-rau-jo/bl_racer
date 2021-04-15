@@ -1,0 +1,39 @@
+hr {
+  margin-bottom: 20px;
+  margin-top: 20px;
+  width: 50%;
+}
+
+.join-input {
+  font-size: 36px;
+  text-align: center;
+  text-transform: uppercase;
+  width: 190px;
+}
+
+.menu-button {
+  display: block;
+  font-size: 28px;
+  margin: 5px auto;
+  padding: 5px;
+  width: 200px;
+}
+
+.menu-header {
+  align-items: center;
+  display: flex;
+  flex-flow: row wrap;
+  margin-top: 25px;
+}
+
+.name-label {
+  font-size: 32px;
+  padding: 10px;
+}
+
+.name-input {
+  display: block;
+  font-size: 20px;
+  margin-top: 7px;
+  width: 150px;
+}
