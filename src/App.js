@@ -3,8 +3,17 @@ import React from 'react';
 import Game from './components/Game/Game';
 import Menu from './components/Menu/Menu';
 
+// Keys allowed in the answer inputs (excluding enter and backspace)
+const ALLOWED_NUMS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+const ALLOWED_OPS = ["+", "-", "*", "/"];
+
+// Server URL for our API calls
+const SERVER = window.location.href.includes("localhost")
+  ? "http://localhost:8888/"
+  : "TODO: deployed url";
+
 class App extends React.Component {
-  constructor(props) {
+    constructor(props) {
     super(props);
     this.state = {
       answer: [],
@@ -17,9 +26,6 @@ class App extends React.Component {
       roomCode: null,
       round: 0,
       rounds: 0,
-      SERVER: window.location.href.includes("localhost")
-        ? "http://localhost:8888/"
-        : "TODO: deployed url"
     };
   }
 
@@ -60,7 +66,7 @@ class App extends React.Component {
   }
 
   changeJoinCode = (event) => {
-    this.setState({joinCode: event.target.value});
+    this.setState({joinCode: event.target.value.toUpperCase()});
   }
 
   changeName = (event) => {
@@ -179,7 +185,7 @@ class App extends React.Component {
    */
   serverGET = (path, args) => {
     if (args == null) {
-      return fetch(this.state.SERVER + path);
+      return fetch(SERVER + path);
     }
 
     let argString = '?';
@@ -189,7 +195,7 @@ class App extends React.Component {
 
       argString += args[i][0] + '=' + args[i][1];
     };
-    return fetch(this.state.SERVER + path + argString);
+    return fetch(SERVER + path + argString);
   }
 
   serverPOST = (path, args) => {
@@ -203,7 +209,7 @@ class App extends React.Component {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(json),
     };
-    return fetch(this.state.SERVER + path, requestOptions);
+    return fetch(SERVER + path, requestOptions);
   }
 
   /**
@@ -310,37 +316,29 @@ class App extends React.Component {
       });
   }
 
-  updateAnswer = (event, index) => {
-    const allowedKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "+",
-      "-", "*", "/", "Enter", "Backspace"];
-    console.log(event.key);
-    console.log(event.target.value);
-    console.log(event)
-
-    if (!allowedKeys.includes(event.key)) {
-      console.log("not included")
-      return;
+  answerOnKeyDown = (event, index) => {
+    if ((index % 2 === 0 && !ALLOWED_NUMS.includes(event.key)) ||
+        (index % 2 === 1 && !ALLOWED_OPS.includes(event.key))) {
+      event.preventDefault();
     }
+  }
 
-    if (event.key === "Backspace" && event.target.value === "") {
-      console.log("going back")
-
-      if (index !== 0)
-        document.getElementById("answer" + (index - 1)).focus();
-
+  answerOnKeyUp = (event, index) => {
+    if (event.key === "Backspace" && event.target.value === "" && index !== 0) {
+      const prev = document.getElementById("answer" + (index - 1));
+      prev.focus();
+      prev.value = prev.value.substr(0, prev.value.length - 1);
     } else if (event.key === "Enter" && event.target.value !== "" && index === 4) {
       console.log("submitting")
-    } else {
+    } else if (event.target.value !== "") {
       let copy = this.state.answer;
       copy[index] = event.key;
       this.setState({ answer: copy});
 
       if (index !== 4) {
-        console.log("next")
         document.getElementById("answer" + (index + 1)).focus();
       }
     }
-
   }
 
   print = () => {
@@ -376,6 +374,8 @@ class App extends React.Component {
               joinRoom={this.joinRoom}
               name={this.state.player.name} />
           : <Game
+              answerOnKeyDown={this.answerOnKeyDown}
+              answerOnKeyUp={this.answerOnKeyUp}
               gameOver={this.state.gameOver}
               nums={this.state.nums}
               opponent={this.state.opponent}
@@ -386,8 +386,7 @@ class App extends React.Component {
               roomCode={this.state.roomCode}
               round={this.state.round}
               rounds={this.state.rounds}
-              submitAnswer={this.submitAnswer}
-              updateAnswer={this.updateAnswer}/>
+              submitAnswer={this.submitAnswer} />
         }
 
       </div>

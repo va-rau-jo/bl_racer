@@ -9,12 +9,12 @@ class Game extends React.Component {
    * @returns An array with 5 input tags that will automatically advance and
    * backspace as needed.
    */
-  createAnswerInputs = (updateAnswer) => {
+  genAnswerInputs = (onKeyDown, onKeyUp) => {
     const inputs = [];
     for (let i = 0; i < 5; i++) {
-      inputs.push(
-        <input className="game-answer-input" id={"answer" + i} key={i}
-        type="text" onKeyUp={(e) => updateAnswer(e, i)} />
+      inputs.push(<input className="game-answer-input" id={"answer" + i}
+        onKeyDown={(e) => onKeyDown(e, i)} onKeyUp={(e) => onKeyUp(e, i)}
+        type="text" maxLength="1" size="1"/>
       );
     }
     return inputs;
@@ -25,7 +25,9 @@ class Game extends React.Component {
    * and shows the other player's state.
    */
   gameComponent = (props) => {
-    const answerInputs = this.createAnswerInputs(props.updateAnswer);
+    const answerInputs =
+      this.genAnswerInputs(props.answerOnKeyDown, props.answerOnKeyUp);
+
     return (
       <>
         <div>

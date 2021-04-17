@@ -18,10 +18,8 @@ module.exports = {
     const n1 = parseInt(answer[0]);
     const n2 = parseInt(answer[2]);
     const n3 = parseInt(answer[4]);
-    console.log("here2");
     if (!confirmNumbers([n1, n2, n3], nums))
       return false;
-    console.log("here3");
 
     if (answer[1] === '+') {
       result = n1 + n2;
@@ -36,7 +34,6 @@ module.exports = {
     } else {
       return false; // not an operation
     }
-    console.log("result 1: " + result);
 
     if (answer[3] === '+') {
       result += n3;
@@ -51,8 +48,6 @@ module.exports = {
     } else {
       return false; // not an operation
     }
-    console.log("answer: " + answer);
-    console.log("result2 : " + result);
     return result % 10 === 0;
   }
 }

@@ -82,7 +82,7 @@ class Room {
   // Sets this.code to a random CODE_LENGTH size string of letters
   generateCode() {
     let result = [];
-    let characters = 'A' // ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let n = characters.length;
     for (let i = 0; i < CODE_LENGTH; i++) {
       result.push(characters.charAt(Math.floor(Math.random() * n)));

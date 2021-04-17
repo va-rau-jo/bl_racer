@@ -4,6 +4,10 @@ body {
   text-align: center;
 }
 
+button {
+  cursor: pointer;
+}
+
 header {
   display: flex;
   flex-direction: column;
