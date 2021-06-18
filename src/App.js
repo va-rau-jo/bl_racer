@@ -2,10 +2,7 @@ import './App.css';
 import React from 'react';
 import Game from './components/Game/Game';
 import Menu from './components/Menu/Menu';
-
-// Keys allowed in the answer inputs (excluding enter and backspace)
-const ALLOWED_NUMS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const ALLOWED_OPS = ["+", "-", "*", "/"];
+const utils = require('./utils/utils');
 
 // Server URL for our API calls
 const SERVER = window.location.href.includes("localhost")
@@ -16,11 +13,12 @@ class App extends React.Component {
     constructor(props) {
     super(props);
     this.state = {
-      answer: [],
+      countdownTime: 0,
       host: false,
       joinCode: null,
-      opponent: null,
+      muted: false,
       nums: [],
+      opponent: null,
       player: { name: "Player"},
       ready: false,
       roomCode: null,
@@ -35,14 +33,9 @@ class App extends React.Component {
 
   componentDidMount = () => {
     window.addEventListener("beforeunload", (ev) => {
-
       if (this.state.roomCode !== null)  {
         ev.preventDefault();
         this.leaveRoom();
-        // setTimeout(() => {
-
-        // }, 1000)
-        // window.close();
         return ev.returnValue = "Closing";
       }
     });
@@ -52,23 +45,77 @@ class App extends React.Component {
     window.removeEventListener('beforeunload', this.handleWindowClose);
   }
 
+  /**
+   * Called when the server has a higher round number than before. Resets the
+   * answer inputs and starts the countdown for the round.
+   */
   advanceRound = (room) => {
-    console.log("advanced round, starting in 3")
+    utils.log("advanced round, starting in 3")
     for (let i = 0; i < 5; i++) {
-      const input = document.getElementById("answer" + i);
-      if (input)
+      const input = this.id("answer" + i);
+      if (input) {
         input.value = "";
+
+        if (i === 0)
+          input.focus();
+      }
     }
 
-    setTimeout(() => {
-      this.setState({answer: [], nums: room.nums});
-    }, 3000)
+    this.playSound('countdown.wav');
+    this.setState({
+      countdownTime: utils.START_ROUND_WAIT_TIME,
+      countdownTimer: setInterval(this.numbersCountdown, 1000, room)
+    });
   }
 
+  /**
+   * Only numbers are allowed at indices 0, 2, 4 and only the operation keys
+   * are allowed at indices 1, 3.
+   * @param {object} event Event object, containing the key pressed.
+   * @param {number} index The number index the user typed into.
+   */
+  answerOnKeyDown = (event, index) => {
+    if ((index % 2 === 0 && !utils.ALLOWED_NUMS.includes(event.key)) ||
+        (index % 2 === 1 && !utils.ALLOWED_OPS.includes(event.key)))
+      event.preventDefault();
+  }
+
+  /**
+   * Backspace removes the last character typed, moving inputs if necessary.
+   * Enter submits the answer if on the last input. If a character is typed, the
+   * next input is selected.
+   * @param {object} event The event object, containing the key pressed
+   * @param {number} index The index of input typed into.
+   */
+  answerOnKeyUp = (event, index) => {
+    if (event.key === "Backspace" && event.target.value !== "") {
+      const input = this.id("answer" + index);
+      input.value = "";
+    } else if (event.key === "Backspace" && event.target.value === "" && index !== 0) {
+      const prev = this.id("answer" + (index - 1));
+      prev.focus();
+      prev.value = "";
+    } else if (event.key === "Enter" && event.target.value !== "" && index === 4) {
+      if (!this.id("submit-btn").disabled)
+        this.submitAnswer();
+    } else if (event.target.value !== "") {
+      if (index !== 4)
+        this.id("answer" + (index + 1)).focus();
+    }
+  }
+
+  /**
+   * Updates the state to store the join code currently typed.
+   * @param {object} event The event object containing the code.
+   */
   changeJoinCode = (event) => {
     this.setState({joinCode: event.target.value.toUpperCase()});
   }
 
+  /**
+   * Updates the state to store the current name typed.
+   * @param {object} event The event object containing the name.
+   */
   changeName = (event) => {
     this.setState({player: {"name": event.target.value}});
   }
@@ -78,102 +125,216 @@ class App extends React.Component {
    * an interval to await for new players to join.
    */
   createRoom = () => {
-    // console.log("creating room")
-    this.serverGET('create', [['name', this.state.player.name]])
+    let rounds = this.id("roundInput").value;
+    utils.log(rounds)
+    this.serverGET('create', [['name', this.state.player.name], ["rounds", rounds]])
       .then(res => res.json())
+      .then(this.jsonCheck)
       .then((json) => {
-        if (json) {
-          console.log("created room " + json.message);
-          this.setState({host: true,
-            roomCode: json.message.code,
-            rounds: json.message.rounds
-          });
-          this.startOpponentFetch();
-        } else {
-          console.log("Could not read json message");
-        }
+        this.setState({host: true,
+          roomCode: json.message.code,
+          rounds: json.message.rounds
+        });
+        this.startOpponentFetch();
       });
     }
+
+  handleGameStatus = (json) => {
+    json = json.message;
+    if (json.success) {
+      let room = json.room;
+      let player = this.state.host ? room.player1 : room.player2;
+      let opponent = !this.state.host ? room.player1 : room.player2;
+
+      // Update player and opponent object.
+      let opponentCorrect = this.state.opponent.correct;
+      this.setState({
+        gameOver: room.gameOver,
+        opponent: opponent,
+        player: player
+      });
+
+      // Player got the answer right during the second chance countdown
+      if (this.state.player.correct && this.state.opponent.correct && this.state.countdownTimer !== null) {
+        clearInterval(this.state.countdownTimer);
+        this.setState({
+          countdownTime: 0,
+          countdownTimer: null,
+        });
+      }
+
+      // Opponent just got the answer right and the player has not
+      if (!this.state.player.correct && this.state.opponent.correct && !opponentCorrect) {
+        this.setState({
+          countdownTime: utils.SECOND_CHANCE_TIMEOUT,
+          countdownTimer: setInterval(this.secondChanceCountdown, 1000)
+        });
+      }
+
+      // Round has advanced
+      if (room.round !== this.state.round) {
+        this.setState({
+          ready: player.ready,
+          round: room.round}
+        );
+        if (room.round > 0 && !this.state.gameOver)
+          this.advanceRound(room);
+        else if (this.state.gameOver) {
+          this.setState({nums: []});
+        }
+      }
+    } else {
+      this.resetState(true);
+    }
+  }
 
   /**
    * Join a room with the given code, sets roomCode to joinCode if successful
    */
   joinRoom = () => {
-    // console.log("joining room")
     this.serverGET('join', [['name', this.state.player.name],
                              ['code', this.state.joinCode]])
       .then(res => res.json())
+      .then(this.jsonCheck)
       .then((json) => {
-        if (json && json.message.success) {
-          console.log("joined room " + this.state.joinCode);
+        if (json.message.success) {
+          utils.log("joined room " + this.state.joinCode);
           this.setState({
             opponent: json.message.opponent,
             roomCode: this.state.joinCode,
             rounds: json.message.rounds,
-
           });
           this.startGameStatusFetch();
-        } else if (json && !json.message.success) {
-          console.log("could not join room " + this.state.joinCode);
         } else {
-          console.log("Could not read json message");
+          utils.log("could not join room " + this.state.joinCode);
         }
       });
   }
 
+  /**
+   * Leave the current room which resets most of the state.
+   */
   leaveRoom = () => {
+    clearInterval(this.state.gameStatusInterval);
+
     this.serverPOST('leave', [['host', this.state.host],
                              ['code', this.state.roomCode]])
       .then(res => res.json())
+      .then(this.jsonCheck)
       .then((json) => {
-        console.log(json);
-        if (json && json.message.success) {
-          this.setState({
-            answer: [],
-            host: false,
-            joinCode: null,
-            opponent: null,
-            nums: [],
-            player: { name: "Player"},
-            ready: false,
-            roomCode: null,
-            round: 0,
-          });
-          console.log("reset state");
+        if (json.message.success) {
+          this.resetState();
         } else {
-          console.log("Could not read json message");
+          utils.log("Could not read json message");
         }
     });
   }
 
+  /**
+   * Function called on interval before starting the room. Once completed, it
+   * reveals the numbers for the round.
+   * @param {JSON} room A json object containg the numbers.
+   */
+  numbersCountdown = (room) => {
+    if (this.state.countdownTime > 1) {
+      this.setState({countdownTime: this.state.countdownTime - 1});
+    } else {
+      clearInterval(this.state.countdownTimer);
+      this.id("submit-btn").disabled = false;
+      this.setState({
+        countdownTime: 0,
+        countdownTimer: null,
+        nums: room.nums
+      });
+    }
+  }
+
+  /**
+   * Function to play a sound. Doesn't play a sound if the mute option has been
+   * enabled.
+   * @param {string} name The name of the sound to play (with the extension)
+   */
+  playSound = (name) => {
+    if (!this.state.muted) {
+      let audio = new Audio(name);
+      audio.volume = 0.5;
+      audio.play();
+    }
+  }
+
+  /**
+   * Function to declare to the server that this player is ready to start.
+   */
   readyUp = () => {
     this.setState({ready: !this.state.ready});
     this.serverPOST('ready', [['host', this.state.host],
                              ['code', this.state.roomCode]])
       .then(res => res.json())
+      .then(this.jsonCheck)
       .then((json) => {
-        console.log(json);
-        if (json && json.message.success) {
-          console.log("ready successful");
+        if (json.message.success) {
+          utils.log("ready successful");
         } else {
-          console.log("Could not read json message");
+          utils.log("Could not read json message");
         }
       });
   }
 
+  /**
+   * Sends a request to the server for a rematch, if the other player requests
+   * a rematch also, the game will restart.
+   */
   requestRematch = () => {
-    console.log("Requesting rematch");
     this.serverPOST('rematch', [['host', this.state.host],
-                             ['code', this.state.roomCode]])
-      .then(res => res.json())
-      .then((json) => {
-        console.log(json);
-        if (json && json.message.success) {
-          console.log("rematch successful");
-        } else {
-          console.log("Could not read json message");
-        }
+                             ['code', this.state.roomCode]]);
+  }
+
+  resetState = (displayMessage) => {
+    clearInterval(this.state.gameStatusInterval);
+
+    if (this.state.roomCode !== null)
+      this.leaveRoom();
+      this.setState({
+        host: false,
+        joinCode: null,
+        opponent: null,
+        nums: [],
+        ready: false,
+        roomCode: null,
+        round: 0,
       });
+
+    if (displayMessage) {
+      alert("Something went wrong.");
+    }
+  }
+
+  /**
+   * OnChange function to update the label of the round selector with the
+   * current value.
+   */
+  roundInputChange = () => {
+    var slider = this.id("roundInput");
+    var label = this.id("roundsLabel");
+    label.innerHTML = "Rounds: " + slider.value;
+  }
+
+  /**
+   * Function called on interval after the opponent gets an answer right. Player
+   * has SECOND_CHANCE_TIMEOUT time to submit an answer for half points.
+   * @param {JSON} room A json object containg the numbers.
+   */
+  secondChanceCountdown = (room) => {
+    if (this.state.countdownTime > 1) {
+      this.setState({countdownTime: this.state.countdownTime - 1});
+    } else {
+      clearInterval(this.state.countdownTimer);
+      this.id("submit-btn").disabled = true;
+      this.setState({
+        countdownTime: 0,
+        countdownTimer: null
+      });
+    }
   }
 
   /**
@@ -221,50 +382,9 @@ class App extends React.Component {
         setInterval(() => {
           this.serverGET('status', [['code', this.state.roomCode]])
             .then(res => res.json())
-            .then((json) => {
-              if (json) {
-                json = json.message;
-                if (json.success) {
-                  let room = json.room;
-                  let player = this.state.host ? room.player1 : room.player2;
-                  let opponent = !this.state.host ? room.player1 : room.player2;
-
-                  if (!room.gameOver && room.round > 0 && opponent === null) {
-                    // opponent left
-                    console.log("opponent left, resetting game");
-                    this.setState({
-                      answer: [],
-                      host: true,
-                      joinCode: null,
-                      opponent: null,
-                      nums: [],
-                      ready: false,
-                      round: 0,
-                    });
-                  } else {
-                    this.setState({
-                      gameOver: room.gameOver,
-                      opponent: opponent,
-                      player: player}
-                    );
-
-                    if (room.round !== this.state.round) {
-                      this.setState({
-                        ready: player.ready,
-                        round: room.round}
-                      );
-                      if (room.round > 0 && !this.state.gameOver)
-                        this.advanceRound(room);
-                    }
-                  }
-                } else if (!json.success) {
-                  console.log("Used wrong room code? Something went wrong.");
-                }
-              } else if (!json) {
-                console.log("Could not read json message");
-              }
-            });
-      }, 4000)
+            .then(this.jsonCheck)
+            .then(this.handleGameStatus)
+      }, utils.FETCH_GAME_STATUS_INTERVAL)
     });
   }
 
@@ -277,93 +397,108 @@ class App extends React.Component {
         setInterval(() => {
           this.serverGET('getOpponent', [['code', this.state.roomCode]])
             .then(res => res.json())
+            .then(this.jsonCheck)
             .then((json) => {
-              if (json) {
-                json = json.message;
-                console.log(json);
-                if (json.success && json.opponent !== null) {
-                  console.log("player " + json.opponent.name + " joined!");
-                  clearInterval(this.state.opponentInterval);
-                  this.setState({
-                    opponent: json.opponent,
-                    opponentInterval: null
-                  });
-                  this.startGameStatusFetch();
-                } else if (!json.success) {
-                  console.log("Used wrong room code? Something went wrong.");
-                }
-              } else if (!json) {
-                console.log("Could not read json message");
+              json = json.message;
+              if (json.success && json.opponent !== null) {
+                utils.log("player " + json.opponent.name + " joined!");
+                clearInterval(this.state.opponentInterval);
+                this.setState({
+                  opponent: json.opponent,
+                  opponentInterval: null
+                });
+                this.startGameStatusFetch();
+              } else if (!json.success) {
+                utils.log("Used wrong room code? Something went wrong.");
               }
             });
-      }, 4000)
+      }, utils.FETCH_OPPONENT_STATUS_INTERVAL)
     });
   }
 
   submitAnswer = () => {
-    console.log("submitting " + this.state.answer);
+    let answer = []
+    for (let i = 0; i < 5; i++) {
+      answer.push(this.id("answer" + i).value);
+    }
+
     this.serverPOST('submit', [['host', this.state.host],
                                ['code', this.state.roomCode],
-                               ['answer', this.state.answer]])
+                               ['answer', answer]])
       .then(res => res.json())
+      .then(this.jsonCheck)
       .then((json) => {
-        console.log(json);
-        if (json && json.message.success) {
-          console.log("submit successful");
+        if (json.message.success) {
+          if (json.message.correct) {
+            this.playSound('correct.mp3');
+            this.id("submit-btn").disabled = true;
+          }
         } else {
-          console.log("Could not read json message");
+          utils.log("Could not read json message");
         }
       });
   }
 
-  answerOnKeyDown = (event, index) => {
-    if ((index % 2 === 0 && !ALLOWED_NUMS.includes(event.key)) ||
-        (index % 2 === 1 && !ALLOWED_OPS.includes(event.key))) {
-      event.preventDefault();
-    }
+  toggleSound = () => {
+    utils.log(this.state.muted)
+    this.setState({muted: !this.state.muted}, () => {
+      this.id("sound-btn").src = this.state.muted
+        ? "/images/muted.png" : "/images/sound.png";
+    });
   }
 
-  answerOnKeyUp = (event, index) => {
-    if (event.key === "Backspace" && event.target.value === "" && index !== 0) {
-      const prev = document.getElementById("answer" + (index - 1));
-      prev.focus();
-      prev.value = prev.value.substr(0, prev.value.length - 1);
-    } else if (event.key === "Enter" && event.target.value !== "" && index === 4) {
-      console.log("submitting")
-    } else if (event.target.value !== "") {
-      let copy = this.state.answer;
-      copy[index] = event.key;
-      this.setState({ answer: copy});
+  // ---- STRICTLY HELPER FUNCTIONS ---- //
 
-      if (index !== 4) {
-        document.getElementById("answer" + (index + 1)).focus();
-      }
+  /**
+   * Function to shorten document.getElementById to id.
+   * @param {string} name The id of the element to get.
+   * @returns {Element} Returns a DOM element.
+   */
+  id = (name) => {
+    return document.getElementById(name);
+  }
+
+  /**
+   * Helper function to make sure a json response is actually JSON.
+   * @param {JSON} json The json response.
+   * @returns {JSON} Returns the json if it is formatted correctly.
+   */
+  jsonCheck = (json) => {
+    if (!json) {
+      utils.log("Could not read json message");
     }
+    return json;
   }
 
   print = () => {
     this.serverGET('print', [['code', this.state.roomCode]])
       .then(res => res.json())
-      .then((json) => { console.log("printed in console")});
+      .then(() => { utils.log("printed in console")});
   }
 
   printrooms = () => {
     this.serverGET('printrooms')
       .then(res => res.json())
-      .then((json) => { console.log("printed in console")});
+      .then(() => { utils.log("printed in console")});
   }
 
   printstate = () => {
-    console.log(this.state);
+    utils.log(this.state);
   }
 
   render() {
     let inRoom = this.state !== undefined && this.state.roomCode !== null;
     return (
       <div className="App">
-        <button onClick={this.printstate}> print state </button>
-        <button onClick={this.print}> print room </button>
-        <button onClick={this.printrooms}> print rooms</button>
+        {utils.DEBUG_MODE ?
+          <>
+            <button onClick={this.printstate}> print state </button>
+            <button onClick={this.print}> print room </button>
+            <button onClick={this.printrooms}> print rooms</button>
+          </> : null
+        }
+        <img id="sound-btn" onClick={this.toggleSound} alt="sound-toggle"
+          src="/images/sound.png" />
 
         {!inRoom
           ? <Menu
@@ -372,23 +507,24 @@ class App extends React.Component {
               createRoom={this.createRoom}
               joinCode={this.state.joinCode}
               joinRoom={this.joinRoom}
-              name={this.state.player.name} />
+              name={this.state.player.name}
+              roundInputChange={this.roundInputChange} />
           : <Game
               answerOnKeyDown={this.answerOnKeyDown}
               answerOnKeyUp={this.answerOnKeyUp}
+              countdownTime={this.state.countdownTime}
               gameOver={this.state.gameOver}
               nums={this.state.nums}
               opponent={this.state.opponent}
               player={this.state.player}
-              ready={this.state.ready}
               readyUp={this.readyUp}
               rematch={this.requestRematch}
+              returnHome={this.resetState}
               roomCode={this.state.roomCode}
               round={this.state.round}
               rounds={this.state.rounds}
               submitAnswer={this.submitAnswer} />
         }
-
       </div>
     );
   }

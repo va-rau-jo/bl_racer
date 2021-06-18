@@ -23,7 +23,22 @@ hr {
   align-items: center;
   display: flex;
   flex-flow: row wrap;
+  justify-content: center;
   margin-top: 25px;
+}
+
+.menu-options {
+  display: flex;
+  justify-content: center;
+  margin: auto;
+  width: fit-content;
+}
+
+.menu-options > div {
+  border: 3px solid #BBBBBB;
+  border-radius: 4%;
+  margin: 20px;
+  padding: 40px 40px;
 }
 
 .name-label {
@@ -36,4 +51,13 @@ hr {
   font-size: 20px;
   margin-top: 7px;
   width: 150px;
+}
+
+.roundInputDiv {
+  margin-top: 20px;
+}
+
+#roundsLabel {
+  font-size: 26px;
+  margin-top: 0;
 }

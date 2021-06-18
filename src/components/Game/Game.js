@@ -29,56 +29,80 @@ class Game extends React.Component {
       this.genAnswerInputs(props.answerOnKeyDown, props.answerOnKeyUp);
 
     return (
-      <>
+      <div className="game-container">
         <div>
-          <p className="game-round-label">
-            ROUND: {props.round} / {props.rounds}
-          </p>
-        </div>
-        <div className="game-submain">
-          <div className="game-numbers-div">
-            {/* <p> p1 answer: {props.player.answer} </p>
-            <p> correct: {props.player.correct ? "True" : "FAlse"} </p>
-            <p> p2 answer: {props.opponent.answer} </p>
-            <p> correct: {props.opponent.correct ? "True" : "FAlse"} </p> */}
-
+          <div>
+            <p className="game-round-label">
+              ROUND: {props.round} / {props.rounds}
+            </p>
+          </div>
+          <div className="game-submain">
+            <div className="game-numbers-div">
               <span className="game-number"> {props.nums[0]} </span>
               <span className="game-number"> {props.nums[1]} </span>
               <span className="game-number"> {props.nums[2]} </span>
-          </div>
-          <div>
-            <div>
-              {answerInputs[0]}
-              {answerInputs[1]}
-              {answerInputs[2]}
-              {answerInputs[3]}
-              {answerInputs[4]}
-              {/* <input className="game-answer-input" id="answer0" type="text"
-                onKeyUp={(e) => props.updateAnswer(e, 0)} />
-              <input className="game-answer-input" id="answer1" type="text"
-                onKeyUp={(e) => props.updateAnswer(e, 1)} />
-              <input className="game-answer-input" id="answer2" type="text"
-                onKeyUp={(e) => props.updateAnswer(e, 2)} />
-              <input className="game-answer-input" id="answer3" type="text"
-                onKeyUp={(e) => props.updateAnswer(e, 3)} />
-              <input className="game-answer-input" id="answer4" type="text"
-                onKeyUp={(e) => props.updateAnswer(e, 4)} /> */}
             </div>
-            <button onClick={props.submitAnswer}> Submit </button>
+            <div>
+              <div>
+                {answerInputs[0]}
+                {answerInputs[1]}
+                {answerInputs[2]}
+                {answerInputs[3]}
+                {answerInputs[4]}
+              </div>
+              <button className="menu-button" id="submit-btn" disabled
+                onClick={props.submitAnswer}>
+                Submit
+              </button>
+            </div>
           </div>
         </div>
-      </>
+        <div>
+          {props.player.correct === true
+            ? <p className="correct-msg"> Correct! </p>
+            : props.player.correct === false
+            ? <p className="incorrect-msg"> Wrong </p>
+            : props.opponent.correct === true
+            ? <p> {props.opponent.name + " got the answer!" } </p>
+            : null}
+
+          {props.countdownTime !== 0
+            ? <p className="countdown_timer"> {props.countdownTime} </p>
+            : null }
+        </div>
+      </div>
     );
   }
 
-   gameOverComponent = (props) => {
+
+  /**
+   * Function to render the component after a game ends, including returning
+   * back to the home page and handling rematches.
+   */
+  gameOverComponent = (props) => {
+    let win = props.player.score > props.opponent.score;
     return (
       <>
-        <p> Game over! </p>
+        <p className="game-over-title">
+          { win ? "You win!" : "You lose..." }
+        </p>
 
-        <p> p1 score: {props.player.score} </p>
-        <p> p2 score: {props.opponent.score} </p>
-        <button onClick={props.rematch}> Rematch? </button>
+        <div className="game-final-div">
+          <button className="game-final-btn"
+            onClick={() => {props.returnHome(false)}}>
+            Home
+          </button>
+          <button className="game-final-btn" disabled={props.player.rematch}
+            onClick={props.rematch}>
+            Rematch?
+          </button>
+
+          {props.opponent.rematch ?
+            <p> {props.opponent.name} wants a rematch! </p> :
+            props.player.rematch ?
+            <p> You offered a rematch! </p> :
+              null}
+        </div>
       </>
     );
    }
@@ -91,7 +115,7 @@ class Game extends React.Component {
     return (
       <div className="ready-main">
         <button className="menu-button" onClick={props.readyUp}>
-          {props.ready ? "Cancel" : "Ready!"}
+          {props.player.ready ? "Cancel" : "Ready!"}
         </button>
         <div>
           <span className="ready-checkbox-label" > {props.opponent.name} ready:
@@ -110,7 +134,7 @@ class Game extends React.Component {
     return (
       <div className="waiting-main">
         <p className="waiting-label"> Waiting for a player to join </p>
-        <img src="/loading.gif" alt="loading" />
+        <img src="/images/loading.gif" alt="loading" />
       </div>
     );
   }
@@ -127,6 +151,7 @@ class Game extends React.Component {
           <Sidebar
             opponent={props.opponent}
             player={props.player}
+            returnHome={props.returnHome}
             roomCode={props.roomCode}
             round={props.round}
             rounds={props.rounds}

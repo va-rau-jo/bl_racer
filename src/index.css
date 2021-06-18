@@ -11,3 +11,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.countdown_timer {
+  font-size: 80px;
+  margin: auto;
+}

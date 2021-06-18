@@ -1,8 +1,8 @@
 const cors = require('cors');
 const express = require('express');
-const request = require('request');
-const Player = require('../data/Player.js');
-const Room = require('../data/Room.js');
+const Player = require('../data/Player');
+const Room = require('../data/Room');
+const utils = require('../utils/utils');
 
 const app = express();
 
@@ -31,12 +31,16 @@ function sendMessage(res, message) {
  */
 app.get('/create', function (req, res) {
   let currentPlayer = new Player(req.query.name);
-  let newRoom = new Room(currentPlayer);
+  let rounds = parseInt(req.query.rounds);
+  if (rounds < 1 || rounds > 9) { // Validate rounds.
+    rounds = 3;
+  }
+  let newRoom = new Room(currentPlayer, rounds);
   while (Room.findRoom(rooms, newRoom.code) !== null) { // ensure unique code
     newRoom.generateCode();
   }
   rooms.push(newRoom);
-  console.log("Created room " + newRoom.code);
+  utils.log("Created room " + newRoom.code);
   sendMessage(res, {"code": newRoom.code, "rounds": newRoom.rounds});
 });
 
@@ -53,7 +57,7 @@ app.get('/getOpponent', function (req, res) {
     sendMessage(res, {"success": false});
     return;
   }
-  // console.log("sending opponent: " + room.player2);
+  utils.log("sending opponent: " + room.player2);
 
   sendMessage(res, {"success": true, "opponent": room.player2});
 });
@@ -77,7 +81,7 @@ app.get('/join', function (req, res) {
 
   let currentPlayer = new Player(name);
   room.addPlayer(currentPlayer);
-  console.log("Player " + room.player2.name + " joined room " + code);
+  utils.log("Player " + room.player2.name + " joined room " + code);
   sendMessage(res, {
     "success": true,
     "opponent": room.player1,
@@ -98,23 +102,21 @@ app.get('/status', function (req, res) {
     sendMessage(res, {"success": false});
     return;
   }
-  // console.log(room.toJSON());
   sendMessage(res, {"success": true, "room": room.toJSON()});
 });
 
 
 app.get('/print', function (req, res) {
   let room = Room.findRoom(rooms, req.query.code);
-  console.log(room.toJSON());
+  utils.log(room.toJSON());
   sendMessage(res, {"success": true});
 });
 
 app.get('/printrooms', function (req, res) {
-  console.log("ROOMS: ")
-  rooms.forEach(e => console.log(e.toJSON()));
+  utils.log("ROOMS: ")
+  rooms.forEach(e => utils.log(e.toJSON()));
   sendMessage(res, {"success": true});
 });
-
 
 
 /**
@@ -138,17 +140,21 @@ app.post('/leave', function (req, res) {
   }
 
   if (req.body.host) {
-    // console.log(room.player1.name + " leaving room");
-    room.player1 = room.player2;
-    room.player2 = null;
+    utils.log("host leaving room");
+    if (room.player2 && !room.player2.disconnected) {
+      room.player1.disconnected = true;
+    } else {
+      utils.log("deleting room");
+      Room.deleteRoom(rooms, req.body.code);
+    }
   } else {
-    // console.log(room.player2.name + " leaving room");
-    room.player2 = null;
-  }
-  if (room.player1 === null && room.player2 === null) {
-    rooms = rooms.filter((x) => { return x.code !== room.code});
-  } else {
-    room.resetGame();
+    utils.log("non host leaving room");
+    if (room.player1 && !room.player1.disconnected) {
+      room.player2.disconnected = true;
+    } else {
+      utils.log("deleting room");
+      Room.deleteRoom(rooms, req.body.code);
+    }
   }
   sendMessage(res, {"success": true});
 });
@@ -209,11 +215,10 @@ app.post('/submit', function (req, res) {
     sendMessage(res, {"success": false});
     return;
   }
-
   let correct = room.checkAnswer(req.body.answer, req.body.host);
   sendMessage(res, {"success": true, "correct": correct});
 });
 
 let port = process.env.PORT || 8888;
-console.log("starting server on port " + port);
+utils.log("starting server on port " + port);
 app.listen(port);

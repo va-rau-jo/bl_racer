@@ -7,8 +7,6 @@ confirmNumbers = (a, b) => {
   b.sort();
   sum1 = a[0] * 100 + a[1] * 10 + a[2];
   sum2 = b[0] * 100 + b[1] * 10 + b[2];
-  console.log(sum1);
-  console.log(sum2);
   return sum1 === sum2;
 }
 

@@ -22,6 +22,22 @@ main {
   min-height: 100vh;
 }
 
+#home-btn {
+  cursor: pointer;
+  height: 32px;
+  position: absolute;
+  left: 5px;
+  top: 5px;
+}
+
+#sound-btn {
+  cursor: pointer;
+  height: 32px;
+  position: absolute;
+  right: 5px;
+  top: 5px;
+}
+
 .App-link {
   color: #61dafb;
 }

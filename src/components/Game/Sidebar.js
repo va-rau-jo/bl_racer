@@ -6,6 +6,8 @@ function Sidebar(props) {
 
   return (
     <>
+      <img id="home-btn" onClick={() => {props.returnHome(false)}} alt="home"
+        src="/images/home.png" />
       <p className="room-code-label"> Code:
         <span className="room-code"> {props.roomCode} </span>
       </p>
@@ -20,7 +22,7 @@ function Sidebar(props) {
             <>
               <p className="sidebar-score"> {props.player.score} </p>
               <ul className="sidebar-scores">
-                { props.player.scores.map(function(score, i){
+                {props.player.scores.map(function(score, i){
                     const color = score === 10
                       ? "score-item-green"
                       : score === 5

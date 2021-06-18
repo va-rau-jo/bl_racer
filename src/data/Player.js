@@ -5,7 +5,8 @@ let extend = require("extend");
 class Player {
   constructor(name) {
     this.answer = null;
-    this.correct = false;
+    this.correct = null;
+    this.disconnected = false;
     this.name = name;
     this.score = 0;
     this.scores = [];
@@ -15,7 +16,8 @@ class Player {
 
   reset() {
     this.answer = null;
-    this.correct = false;
+    this.correct = null;
+    this.disconnected = false;
     this.score = 0;
     this.scores = [];
     this.ready = false;
