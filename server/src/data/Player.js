@@ -1,6 +1,4 @@
 "use strict";
-let extend = require("extend");
-
 // Declare the constructor and member properties.
 class Player {
   constructor(name) {

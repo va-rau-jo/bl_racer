@@ -1,8 +1,8 @@
 const cors = require('cors');
 const express = require('express');
-const Player = require('../data/Player');
-const Room = require('../data/Room');
-const utils = require('../utils/utils');
+const Player = require('./data/Player');
+const Room = require('./data/Room');
+const utils = require('./utils/utils');
 
 const app = express();
 

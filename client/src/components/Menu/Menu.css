@@ -24,7 +24,33 @@ hr {
   display: flex;
   flex-flow: row wrap;
   justify-content: center;
-  margin-top: 25px;
+  margin-top: 10px;
+}
+
+.menu-info {
+  font-size: 20px;
+  margin: 0 auto 36px auto;
+  position: relative;
+  width: 50%;
+}
+
+.menu-info a {
+  color: #00a5e4;
+}
+
+.menu-info-theory {
+  background-color: #1a1a23;
+  border-radius: 5px;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.menu-info-small-text {
+  margin: 0;
+}
+
+.menu-info-title {
+  margin-top: 0;
 }
 
 .menu-options {
@@ -39,6 +65,24 @@ hr {
   border-radius: 4%;
   margin: 20px;
   padding: 40px 40px;
+}
+
+#minimize-button {
+  cursor: pointer;
+  font-size: 12px;
+  position: absolute;
+  right: 10px;
+  top: 0px;
+  width: 25px;
+}
+
+.minimized {
+  display: none;
+}
+
+.info-div {
+  margin: auto;
+  width: 80%;
 }
 
 .name-label {
@@ -60,4 +104,8 @@ hr {
 #roundsLabel {
   font-size: 26px;
   margin-top: 0;
+}
+
+.title {
+  margin: 0;
 }
